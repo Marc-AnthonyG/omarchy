@@ -413,6 +413,18 @@ A panel matches a screen whose connector name starts with `connector` and whose 
 
 Until Hyprland reports a screen's mode, a top bar there waits to appear if a description names the screen's connector, unless the logical size times Qt's whole-number scale already matches a panel. It then appears at its floor rather than growing once windows are laid out, and never guesses a floor for a panel nothing describes. After two seconds without a mode it appears without a floor. Notifications clear the bar as thick as it is on their screen. A plugin's `shell.bar` gives the same through `barSizeFor(screenName)` and the `barSizes` map (screen name to thickness); its `barSize` stays the configured size, which the widgets are drawn at.
 
+### Detached bar
+
+`[bar] margin` and `radius` lift the bar off its screen edge. `margin` is the gap left on every edge the bar touches — the one it is anchored to and the two it spans — and `radius` rounds the corners of the bar surface:
+
+```toml
+[bar]
+margin = 10   # gap between the bar and the screen edges; 0 = flush
+radius = 12   # corner rounding of the bar surface; 0 = square
+```
+
+Both default to `0`, a bar sitting flush against its edge with square corners, and both follow `scale-with-font` like the sizes above. The gap is reserved along with the bar itself, so maximized and tiled windows stop clear of it instead of sliding underneath. Auto-hide still parks the bar fully off screen, clearing the margin as well as the bar.
+
 ## Custom bar modules
 
 If a full plugin is overkill, declare a one-off module inline in
