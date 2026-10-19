@@ -425,11 +425,11 @@ margin = 10   # gap between the bar and the screen edges; 0 = flush
 radius = 12   # corner rounding of the bar surface; 0 = square
 ```
 
-`margin` accepts the same CSS-style list as the border widths — `N`, `"Y X"`, `"T X B"`, or `"T R B L"` — so the gap can differ per edge. A bar set further off the sides than off the edge it hangs from:
+`margin` accepts the same CSS-style list as the border widths — `N`, `"Y X"`, `"T X B"`, or `"T R B L"` — so the gap can differ per edge. A top bar set further off the sides than off the edge it hangs from:
 
 ```toml
 [bar]
-margin = "4 8"   # 4 from the anchored edge, 8 at the two it spans
+margin = "4 8"   # 4 top and bottom, 8 left and right: a top bar sits 4 below the edge and 8 in from each side
 ```
 
 Both default to `0`, a bar sitting flush against its edge with square corners, and both follow `scale-with-font` like the sizes above. The gap is reserved along with the bar itself, so maximized and tiled windows stop clear of it instead of sliding underneath. Auto-hide still parks the bar fully off screen, clearing the margin as well as the bar. Panels opened from the bar and notifications place themselves from the bar's outer face, so they follow it. Widgets read the gap as `bar.barMargins`, and plugins that position their own windows as `shell.bar.barMargins`, both an object with `top`, `right`, `bottom` and `left`.
