@@ -670,9 +670,10 @@ Item {
   readonly property int barSize: vertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
   // A detached bar floats barMargins away from every screen edge it touches
   // and rounds its corners by barRadius. Every side is 0 by default, which
-  // anchors the bar flush against its edge with square corners. The keys are
-  // the position names, so barMargins[position] is the anchored edge's gap.
-  readonly property var barMargins: Style.bar.margins
+  // anchors the bar flush against its edge with square corners, and the far
+  // face is always 0. The keys are the position names, so
+  // barMargins[position] is the anchored edge's gap.
+  readonly property var barMargins: BarModel.edgeMargins(Style.bar.margins, position)
   readonly property int barRadius: Style.bar.radius
 
   // Display cutouts (a camera notch) the platform's own package describes in
@@ -717,7 +718,6 @@ Item {
     }) : null
   }
 
-  // How thick the bar is on a screen. A top bar shorter than a panel's camera
   // How far a panel's camera cutout reaches into the top bar on a screen. A
   // detached bar sits its top margin below the edge, so the cutout reaches
   // that much less into it, and not at all once the margin clears it.
@@ -726,6 +726,7 @@ Item {
     return BarModel.notchReach(BarModel.notchFloor(root.displayCutouts, root.position, screen.name, screen.width, screen.height, screen.devicePixelRatio, root.panelModeFor(screen), Style.bar.notchHeight), root.barMargins.top)
   }
 
+  // How thick the bar is on a screen. A top bar shorter than a panel's camera
   // cutout leaves a sliver of every window peeking out beside the camera, so
   // the cutout is this panel's minimum sensible top-bar height. An
   // intentionally taller bar still wins.
@@ -1582,10 +1583,10 @@ Item {
     }
 
     // Parked by its full thickness, which a notch floor may make more than
-    // barSize, plus its margin, so neither the bar nor the gap leaves a strip
-    // of it on screen.
+    // barSize, so no strip of it stays on screen. The parked margin replaces
+    // the anchored edge's gap rather than adding to it.
     readonly property int anchoredMargin: root.barMargins[root.position]
-    readonly property int parkedMargin: -(barWindow.thickness + anchoredMargin)
+    readonly property int parkedMargin: -barWindow.thickness
     readonly property int edgeMargin: root.barHidden ? parkedMargin : anchoredMargin
 
     // Only the edges the bar actually touches take a gap: the one it is
@@ -1891,11 +1892,14 @@ Item {
         required property string modelData
         readonly property bool edgeVertical: modelData === "left" || modelData === "right"
         readonly property int edgeSize: edgeVertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
+        // Where a detached bar would land on this edge, rounded as it would be.
+        readonly property var edgeMargins: BarModel.edgeMargins(Style.bar.margins, modelData)
 
-        x: modelData === "right" ? parent.width - edgeSize : 0
-        y: modelData === "bottom" ? parent.height - edgeSize : 0
-        width: edgeVertical ? edgeSize : parent.width
-        height: edgeVertical ? parent.height : edgeSize
+        x: modelData === "right" ? parent.width - edgeSize - edgeMargins.right : edgeMargins.left
+        y: modelData === "bottom" ? parent.height - edgeSize - edgeMargins.bottom : edgeMargins.top
+        width: edgeVertical ? edgeSize : parent.width - edgeMargins.left - edgeMargins.right
+        height: edgeVertical ? parent.height - edgeMargins.top - edgeMargins.bottom : edgeSize
+        radius: Style.bar.radius
         color: root.transparent ? "transparent" : root.background
         borderSpec: Border.flat(root.barForeground, 1)
         visible: opacity > 0

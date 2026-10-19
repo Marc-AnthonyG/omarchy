@@ -7,9 +7,10 @@
 // Top-left of the bar window on its screen.
 function barOrigin(position, margins, barW, barH, screenW, screenH) {
   var m = margins || {}
+  var side = function(name) { return Number(m[name]) || 0 }
   return {
-    x: position === "right" ? screenW - (m.right || 0) - barW : (m.left || 0),
-    y: position === "bottom" ? screenH - (m.bottom || 0) - barH : (m.top || 0)
+    x: position === "right" ? screenW - side("right") - barW : side("left"),
+    y: position === "bottom" ? screenH - side("bottom") - barH : side("top")
   }
 }
 

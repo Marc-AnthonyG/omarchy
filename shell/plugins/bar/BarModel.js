@@ -613,6 +613,25 @@ function notchReach(floor, margin) {
   return reach > 0 ? reach : 0
 }
 
+// The gaps a detached bar at `position` keeps from the screen edges, from the
+// [bar] margin width spec: the edge it is anchored to and the two it spans.
+// Its far face is not against an edge, so that side is 0.
+function edgeMargins(margins, position) {
+  var m = margins || {}
+  var edge = normalizePosition(position)
+  // A side is dropped for a bar anchored opposite it, and read as a number.
+  var side = function(name, opposite) {
+    var value = Number(m[name])
+    return edge === opposite || !(value > 0) ? 0 : value
+  }
+  return {
+    top: side("top", "bottom"),
+    right: side("right", "left"),
+    bottom: side("bottom", "top"),
+    left: side("left", "right")
+  }
+}
+
 // The bar's thickness on the screen with this name, from the sizes a bar
 // publishes by screen name, or `fallback` (its configured size) for a screen
 // it has none for.
@@ -628,6 +647,7 @@ if (typeof module !== "undefined") {
     centerBesideRight: centerBesideRight,
     cutoutPending: cutoutPending,
     cutoutTop: cutoutTop,
+    edgeMargins: edgeMargins,
     isDrawnSlot: isDrawnSlot,
     notchFloor: notchFloor,
     notchReach: notchReach,

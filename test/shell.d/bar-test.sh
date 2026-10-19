@@ -79,12 +79,12 @@ assert(
   /exclusionMode: root\.barHidden \? ExclusionMode\.Ignore : ExclusionMode\.Auto/.test(barSource),
   'a hidden bar reserves no space for itself'
 )
-// A detached bar sits barMargin off its edge, so parking has to clear the gap
-// as well as the bar's whole thickness or the margin leaves a sliver of it on
-// screen.
+// A detached bar sits barMargins[position] off its edge. Hidden, that edge's
+// margin is replaced by minus the bar's whole thickness, which parks it fully
+// off screen whatever the gap was.
 assert(
-  /readonly property int parkedMargin: -\(barWindow\.thickness \+ anchoredMargin\)/.test(barSource),
-  'parking a hidden bar clears its margin as well as its whole thickness'
+  /readonly property int parkedMargin: -barWindow\.thickness\n/.test(barSource),
+  'parking a hidden bar moves it its whole thickness past the edge'
 )
 assert(
   /readonly property int edgeMargin: root\.barHidden \? parkedMargin : anchoredMargin/.test(barSource),
@@ -96,6 +96,14 @@ for (const edge of ['top', 'bottom', 'left', 'right']) {
     `a hidden bar parks past the ${edge} edge`
   )
 }
+// The two edges a bar spans take their own gaps; its far face takes none.
+assert(
+  /top: root\.position === "top" \? edgeMargin : \(root\.vertical \? root\.barMargins\.top : 0\)/.test(barSource) &&
+    /bottom: root\.position === "bottom" \? edgeMargin : \(root\.vertical \? root\.barMargins\.bottom : 0\)/.test(barSource) &&
+    /left: root\.position === "left" \? edgeMargin : \(root\.vertical \? 0 : root\.barMargins\.left\)/.test(barSource) &&
+    /right: root\.position === "right" \? edgeMargin : \(root\.vertical \? 0 : root\.barMargins\.right\)/.test(barSource),
+  'a detached bar keeps its gap at both ends and none on its far face'
+)
 
 // The gap is a width spec, not a scalar, so a bar can sit further off the edges
 // it spans than off the one it hangs from. The anchored edge reads out of the
@@ -112,6 +120,79 @@ assert(
 assert(
   /readonly property int anchoredMargin: root\.barMargins\[root\.position\]/.test(barSource),
   'the anchored edge takes its own side of the margin'
+)
+
+// shell.toml to the bar's margins, by value: the parser keeps the list as
+// written, the token reads it per edge and scales it with the font as the
+// sizes do, and the bar keeps only the sides that face a screen edge.
+{
+  const vm = require('vm')
+  const qmlFunction = name => {
+    const start = styleSource.indexOf(`function ${name}(`)
+    let depth = 0
+    for (let i = styleSource.indexOf('{', start); start >= 0 && i < styleSource.length; i++) {
+      if (styleSource[i] === '{') depth++
+      else if (styleSource[i] === '}' && --depth === 0) return styleSource.slice(start, i + 1)
+    }
+    throw new Error(`Style.qml has no function ${name}`)
+  }
+  const geometry = vm.createContext({})
+  vm.runInContext(fs.readFileSync(root + '/shell/Commons/BorderGeometry.js', 'utf8').replace(/^\.pragma library\n/, ''), geometry)
+  const style = vm.createContext({ Geometry: geometry })
+  vm.runInContext(['barToken', 'barInsetToken', 'barMarginToken', 'boolToken', 'applyShellValues'].map(qmlFunction).join('\n') +
+    '\nvar fontScale = 1, barScaleWithFont = true, barOverrides = {}', style)
+  const margins = values => {
+    style.applyShellValues(values)
+    return JSON.parse(JSON.stringify(style.barMarginToken()))
+  }
+  const radius = values => {
+    style.applyShellValues(values)
+    return style.barInsetToken('radius', 0)
+  }
+
+  assertDeepEqual(margins({}), { top: 0, right: 0, bottom: 0, left: 0 }, 'a bar without a margin is flush')
+  assertDeepEqual(margins({ 'bar.margin': '10' }), { top: 10, right: 10, bottom: 10, left: 10 }, 'a single margin applies to every edge')
+  assertDeepEqual(margins({ 'bar.margin': '4 8' }), { top: 4, right: 8, bottom: 4, left: 8 }, 'a two-value margin is vertical then horizontal')
+  assertDeepEqual(margins({ 'bar.margin': '1 2 3' }), { top: 1, right: 2, bottom: 3, left: 2 }, 'a three-value margin is top, sides, bottom')
+  assertDeepEqual(margins({ 'bar.margin': '1 2 3 4' }), { top: 1, right: 2, bottom: 3, left: 4 }, 'a four-value margin is top, right, bottom, left')
+  assertDeepEqual(margins({ 'bar.margin': '-4' }), { top: 0, right: 0, bottom: 0, left: 0 }, 'a negative margin reads as flush')
+  assertDeepEqual(margins({ 'bar.margin': 'wide' }), { top: 0, right: 0, bottom: 0, left: 0 }, 'an unreadable margin reads as flush')
+  assertEqual(style.barOverrides.margin, 'wide', 'the margin reaches the token as it was written')
+  assertEqual(radius({ 'bar.radius': '9' }), 9, 'the radius reaches the bar')
+  assertEqual(radius({ 'bar.radius': '0' }), 0, 'a radius of 0 stays square')
+  assertEqual(radius({}), 0, 'a bar without a radius is square')
+
+  style.fontScale = 1.5
+  assertDeepEqual(margins({ 'bar.margin': '10' }), { top: 15, right: 15, bottom: 15, left: 15 }, 'the margin scales with the font')
+  assertEqual(radius({ 'bar.radius': '12' }), 18, 'the radius scales with the font')
+  assertDeepEqual(margins({ 'bar.scale-with-font': 'false', 'bar.margin': '10' }), { top: 10, right: 10, bottom: 10, left: 10 }, 'scale-with-font = false keeps the margin in pixels')
+  assertEqual(radius({ 'bar.scale-with-font': 'false', 'bar.radius': '12' }), 12, 'scale-with-font = false keeps the radius in pixels')
+
+  const spec = { top: 4, right: 8, bottom: 4, left: 8 }
+  const edge = position => JSON.parse(JSON.stringify(bar.edgeMargins(spec, position)))
+  assertDeepEqual(edge('top'), { top: 4, right: 8, bottom: 0, left: 8 }, 'a top bar has no gap below it')
+  assertDeepEqual(edge('bottom'), { top: 0, right: 8, bottom: 4, left: 8 }, 'a bottom bar has no gap above it')
+  assertDeepEqual(edge('left'), { top: 4, right: 0, bottom: 4, left: 8 }, 'a left bar has no gap right of it')
+  assertDeepEqual(edge('right'), { top: 4, right: 8, bottom: 4, left: 0 }, 'a right bar has no gap left of it')
+  assertDeepEqual(JSON.parse(JSON.stringify(bar.edgeMargins({ top: '6', right: 'x', left: -2 }, 'top'))), { top: 6, right: 0, bottom: 0, left: 0 }, 'edge margins are numbers and never negative')
+  assertDeepEqual(JSON.parse(JSON.stringify(bar.edgeMargins(null, 'top'))), { top: 0, right: 0, bottom: 0, left: 0 }, 'no margins are a flush bar')
+  assert(
+    /readonly property var barMargins: BarModel\.edgeMargins\(Style\.bar\.margins, position\)/.test(barSource),
+    'the bar keeps only the margins that face a screen edge'
+  )
+}
+
+// Moving the bar previews it where it would land: off the candidate edge by
+// that edge's margins and rounded as the bar is.
+const moveGhost = barSource.slice(barSource.indexOf('component BarMoveGhostPanel'))
+assert(
+  /readonly property var edgeMargins: BarModel\.edgeMargins\(Style\.bar\.margins, modelData\)/.test(moveGhost) &&
+    /x: modelData === "right" \? parent\.width - edgeSize - edgeMargins\.right : edgeMargins\.left/.test(moveGhost) &&
+    /y: modelData === "bottom" \? parent\.height - edgeSize - edgeMargins\.bottom : edgeMargins\.top/.test(moveGhost) &&
+    /width: edgeVertical \? edgeSize : parent\.width - edgeMargins\.left - edgeMargins\.right/.test(moveGhost) &&
+    /height: edgeVertical \? parent\.height - edgeMargins\.top - edgeMargins\.bottom : edgeSize/.test(moveGhost) &&
+    /radius: Style\.bar\.radius/.test(moveGhost),
+  'the move preview shows a detached bar where it will land'
 )
 // The drag overlays are full-screen, so a bar-local point becomes a screen point
 // by adding the bar window's origin. A detached bar's origin is the gap itself on the
@@ -192,6 +273,9 @@ assert(
   assertEqual(panelGeometry.availableLength(100, true, 26, 12, 12), 120, 'a card keeps at least 120 px')
   assertEqual(panelGeometry.barStripSize(26, 26, 6, 6), 38, 'clicks up to the gap below a detached bar count as the bar')
   assertEqual(panelGeometry.barStripSize(26, 26, 0, 6), 32, 'a flush bar strip is the bar and the gap')
+  // A replacement bar plugin hands over its own margins, which may be strings.
+  assertDeepEqual(origin('top', { top: '6', left: '12' }, 1976, 26), { x: 12, y: 6 }, 'bar margins are read as numbers')
+  assertDeepEqual(origin('top', { top: 'x' }, 2000, 26), { x: 0, y: 0 }, 'an unreadable bar margin counts as none')
 
   const panelSource = fs.readFileSync(root + '/shell/Ui/KeyboardPanel.qml', 'utf8')
   assert(
@@ -208,7 +292,7 @@ assert(
     'bar popouts place and forward through the bar window origin and margins'
   )
 
-  // Tray menus, the media popup and the bar options size themselves the same way.
+  // Tray menus and the media popup size themselves the same way.
   const popupSource = fs.readFileSync(root + '/shell/Ui/PopupCard.qml', 'utf8')
   assert(
     /readonly property real barEdgeMargin: bar && bar\.barMargins \? \(bar\.barMargins\[bar\.position\] \|\| 0\) : 0/.test(popupSource) &&
