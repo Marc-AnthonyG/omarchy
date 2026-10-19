@@ -432,7 +432,7 @@ radius = 12   # corner rounding of the bar surface; 0 = square
 margin = "4 8"   # 4 from the anchored edge, 8 at the two it spans
 ```
 
-Both default to `0`, a bar sitting flush against its edge with square corners, and both follow `scale-with-font` like the sizes above. The gap is reserved along with the bar itself, so maximized and tiled windows stop clear of it instead of sliding underneath. Auto-hide still parks the bar fully off screen, clearing the margin as well as the bar.
+Both default to `0`, a bar sitting flush against its edge with square corners, and both follow `scale-with-font` like the sizes above. The gap is reserved along with the bar itself, so maximized and tiled windows stop clear of it instead of sliding underneath. Auto-hide still parks the bar fully off screen, clearing the margin as well as the bar. Panels opened from the bar and notifications place themselves from the bar's outer face, so they follow it. Widgets read the gap as `bar.barMargins`, and plugins that position their own windows as `shell.bar.barMargins`, both an object with `top`, `right`, `bottom` and `left`.
 
 ## Custom bar modules
 
@@ -455,7 +455,7 @@ For a custom QML widget:
 Then `~/.config/omarchy/bar/modules/gpu.qml` (or set `source` to point
 elsewhere). The module is an `Item` and receives `bar`, `moduleName`,
 `settings` properties. `bar` exposes `foreground` / `background` /
-`urgent` / `fontFamily` / `position` / `vertical` / `barSize`, plus
+`urgent` / `fontFamily` / `position` / `vertical` / `barSize` / `barMargins`, plus
 `run(cmd)`, `showTooltip(t, s)` / `hideTooltip(t)`,
 `requestPopout(o)` / `releasePopout(o)`. To shell-quote arguments for
 `run`, use `Util.shellQuote(v)` from `qs.Commons`.
