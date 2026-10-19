@@ -415,9 +415,7 @@ Until Hyprland reports a screen's mode, a top bar there waits to appear if a des
 
 ### Floating bar
 
-`[bar] margin` lift the bar off its screen edge. `margin` is the gap between the bar and every edge the bar touches — the one it is anchored to and the two it spans
-
-[bar] `radius` rounds the corners of the bar surface
+`[bar] margin` lifts the bar off its screen edge: it is the gap between the bar and every edge the bar touches, the one it is anchored to and the two it spans. `[bar] radius` rounds the corners of the bar surface. A theme sets them in its own `shell.toml`, and `~/.config/omarchy/shell.toml` overrides it and survives theme switches.
 
 ```toml
 [bar]
@@ -432,7 +430,7 @@ radius = 12   # corner rounding of the bar surface; 0 = square
 margin = "4 8"   # 4 top and bottom, 8 left and right: a top bar sits 4 below the edge and 8 in from each side
 ```
 
-Both default to `0`, a bar sitting flush against its edge with square corners, and both follow `scale-with-font` like the sizes above. The gap is reserved along with the bar itself, so maximized and tiled windows stop clear of it instead of sliding underneath. Auto-hide still parks the bar fully off screen, clearing the margin as well as the bar. Panels opened from the bar and notifications place themselves from the bar's outer face, so they follow it. Widgets read the gap as `bar.barMargins`, and plugins that position their own windows as `shell.bar.barMargins`, both an object with `top`, `right`, `bottom` and `left`.
+Both default to `0`, a bar sitting flush against its edge with square corners, and both follow `scale-with-font` like the sizes above. The gap is reserved along with the bar itself, so maximized and tiled windows stop clear of it instead of sliding underneath. Hiding the bar still parks it fully off screen. On a panel with a camera cutout, a top margin counts toward clearing it: the bar is floored only at what the cutout reaches past the margin, and a margin that clears the cutout leaves the center sections in the middle. Panels opened from the bar and notifications place themselves from the bar's outer face, so they follow it. Widgets read the gap as `bar.barMargins`, and plugins that position their own windows as `shell.bar.barMargins`, both an object with `top`, `right`, `bottom` and `left`.
 
 ## Custom bar modules
 

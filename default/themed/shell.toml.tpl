@@ -15,8 +15,9 @@ active           = "{{ red }}"
 scale-with-font  = true
 size-horizontal  = 26
 size-vertical    = 28
-# Gap between the bar and the edge. Takes one CSS-style scalar/list:
-# N, "Y X", "T X B", or "T R B L".
+# margin is the gap between the bar and the screen edges it touches, as one
+# CSS-style width: N, "Y X", "T X B", or "T R B L". radius rounds the bar's
+# corners. 0 is flush and square, and both follow scale-with-font.
 margin           = 0
 radius           = 0
 
